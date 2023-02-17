@@ -34,6 +34,7 @@ int main(int argc, char** argv)
     monitor.Stop();
 
     auto json = monitor.GetJson();
+    // Print json to stdout for now
     printf("let results = %s;", json.c_str());
 
     return EXIT_SUCCESS;

@@ -7,13 +7,14 @@
 #include "Process.h"
 #include <algorithm>
 #include <condition_variable>
+#include <json.hpp>
+#include <list>
 #include <memory>
 #include <optional>
+#include <regex>
 #include <string>
 #include <thread>
 #include <vector>
-#include <list>
-#include <json.hpp>
 
 class ProcessMonitor
 {

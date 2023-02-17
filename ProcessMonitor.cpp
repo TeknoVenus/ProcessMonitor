@@ -278,7 +278,8 @@ void ProcessMonitor::receiveMessages()
                 break;
             }
             case proc_event::PROC_EVENT_EXIT:
-            {                pid_t pid = ev->event_data.exit.process_pid;
+            {
+                pid_t pid = ev->event_data.exit.process_pid;
                 auto process = std::find_if(mRunningProcesses.begin(), mRunningProcesses.end(),
                                             [pid](const processInfo &pi) { return pi.pid == pid; });
 
@@ -289,8 +290,9 @@ void ProcessMonitor::receiveMessages()
                     p.endTime = std::chrono::system_clock::now();
                     p.exitCode = ev->event_data.exit.exit_code;
 
-                    //Log("Process '%s' (%s) (PID %d) exited with code %d (parent %s pid:%d)", p.name.c_str(), p.commandLine.c_str(), p.pid,
-//                        p.exitCode, p.parentName.c_str(), p.parentPid);
+                    // Log("Process '%s' (%s) (PID %d) exited with code %d (parent %s pid:%d)", p.name.c_str(),
+                    // p.commandLine.c_str(), p.pid,
+                    //                        p.exitCode, p.parentName.c_str(), p.parentPid);
 
                     // Move process from running to exited
                     mExitedProcesses.insert(mExitedProcesses.end(), std::make_move_iterator(process),
@@ -398,9 +400,7 @@ std::string ProcessMonitor::GetJson()
 {
     Log("Generating process JSON");
 
-    // Right now we just have a flat list of processes, convert this into something useful
-
-    // Get all the parent processes
+    // Convert this into a form that vis.js timeline can understand
     nlohmann::json results;
 
     std::set<std::string> groups;
@@ -416,7 +416,8 @@ std::string ProcessMonitor::GetJson()
             process["content"] = p.name;
             process["title"] = p.commandLine;
             process["group"] = p.parentName;
-            process["start"] = std::chrono::duration_cast<std::chrono::milliseconds>(p.startTime.time_since_epoch()).count();
+            process["start"] =
+                std::chrono::duration_cast<std::chrono::milliseconds>(p.startTime.time_since_epoch()).count();
             process["end"] = std::chrono::duration_cast<std::chrono::milliseconds>(p.endTime.time_since_epoch()).count();
             results["processes"].emplace_back(process);
 
@@ -435,7 +436,7 @@ std::string ProcessMonitor::GetJson()
         results["groups"].emplace_back(group);
     }
 
-    for (const auto& freq : processExecutionCount)
+    for (const auto &freq : processExecutionCount)
     {
         nlohmann::json stats;
         stats["process"] = freq.first;
