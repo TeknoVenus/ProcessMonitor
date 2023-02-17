@@ -62,30 +62,55 @@
 </div>
 
 <script type="text/javascript">
+    function setClusterOptions(enable, zoom = false) {
+        if (enable) {
+            if (!zoom)
+            {
+                window.timeline.setOptions({
+                    cluster: {
+                        titleTemplate: "{count} more events - double click to focus",
+                    }
+                });
+            }
+            else
+            {
+                // Whilst zoomed in, show more items before clustering since we have more screen space
+                window.timeline.setOptions({
+                    cluster: {
+                        titleTemplate: "{count} more events - double click to focus",
+                        maxItems: 10
+                    }
+                });
+            }
+
+        } else {
+            window.timeline.setOptions({
+                cluster: false
+            });
+        }
+    }
+
     function filterGroups() {
         let selected = document.getElementById('process-select').value;
 
         // Work around a weird bug - have to disable clustering before hiding/showing groups
-        window.timeline.setOptions({
-            cluster: false
-        });
+        setClusterOptions(false);
 
         if (selected === '__all_processes__') {
             window.timeline.fit();
-            window.groups.forEach(function(group){
+            window.groups.forEach(function (group) {
                 window.groups.update({id: group.id, visible: true});
             });
+            // Renable clustering
+            setClusterOptions(true);
         } else {
             window.timeline.fit();
-            window.groups.forEach(function(group){
+            window.groups.forEach(function (group) {
                 window.groups.update({id: group.id, visible: group.id === selected});
             });
+            // Renable clustering
+            setClusterOptions(true, true);
         }
-
-        // Renable clustering
-        window.timeline.setOptions({
-            cluster: true
-        });
     }
 
 
@@ -107,13 +132,10 @@
             stack: true,
             verticalScroll: true,
             zoomKey: "ctrlKey",
-            maxHeight: window.innerHeight - 100,
+            maxHeight: window.innerHeight - 150,
             groupOrder: "content",
             min: results.start,
-            max: results.end,
-            cluster: {
-                titleTemplate: "{count} more events - double click to focus"
-            }
+            max: results.end
         };
 
         // Show dropdown for selection
@@ -136,6 +158,7 @@
         // Create a Timeline
         window.timeline = new vis.Timeline(container, items, options);
         timeline.setGroups(groups);
+        setClusterOptions(true);
 
         // Show selected processes
         timeline.on('select', function (properties) {
