@@ -1,0 +1,177 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Process Results</title>
+
+    <script src="https://unpkg.com/vis-timeline@7.7.0/standalone/umd/vis-timeline-graph2d.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/vis-timeline@7.7.0/dist/vis-timeline-graph2d.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+
+    <script src="results.js"></script>
+
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row mt-2">
+        <div class="col-10">
+            <h4>Graph
+                <button class="btn btn-sm btn-secondary ms-3" onclick="window.timeline.fit()">Reset Zoom</button>
+            </h4>
+            <div class="row my-2">
+                <label for="process-select" class="col-sm-1 col-form-label">Filter: </label>
+                <div class="col">
+                    <select onchange="filterGroups()" class="form-select" id="process-select"></select>
+                </div>
+            </div>
+            <div id="visualization"></div>
+            <p class="mt-1 fst-italic">Hold Ctrl and scroll to zoom in/out</p>
+        </div>
+        <div id="stats" class="col-2">
+            <h4>Top Processes</h4>
+            <table class="table table-striped table-bordered mb-4" id="stats-table">
+                <thead>
+                <tr>
+                    <th>Process Name</th>
+                    <th># Executions</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+            <h4>Selected Process</h4>
+            <table class="table table-striped table-bordered">
+                <tbody>
+                <tr>
+                    <td>Name</td>
+                    <td id="selected-process-name">-</td>
+                </tr>
+                <tr>
+                    <td>Command Line</td>
+                    <td><code id="selected-process-comm">-</code></td>
+                </tr>
+                <tr>
+                    <td>Duration (ms)</td>
+                    <td id="selected-process-duration">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script type="text/javascript">
+    function filterGroups() {
+        let selected = document.getElementById('process-select').value;
+
+        // Work around a weird bug - have to disable clustering before hiding/showing groups
+        window.timeline.setOptions({
+            cluster: false
+        });
+
+        if (selected === '__all_processes__') {
+            window.timeline.fit();
+            window.groups.forEach(function(group){
+                window.groups.update({id: group.id, visible: true});
+            });
+        } else {
+            window.timeline.fit();
+            window.groups.forEach(function(group){
+                window.groups.update({id: group.id, visible: group.id === selected});
+            });
+        }
+
+        // Renable clustering
+        window.timeline.setOptions({
+            cluster: true
+        });
+    }
+
+
+    function renderTimeline() {
+        if (window.timeline != null) {
+            window.timeline.destroy();
+            window.timeline = null;
+        }
+
+        // DOM element where the Timeline will be attached
+        let container = document.getElementById('visualization');
+
+        // Create a DataSet (allows two way data-binding)
+        let items = new vis.DataSet(results.processes);
+        window.groups = new vis.DataSet(results.groups);
+
+        // Configuration for the Timeline
+        let options = {
+            stack: true,
+            verticalScroll: true,
+            zoomKey: "ctrlKey",
+            maxHeight: window.innerHeight - 100,
+            groupOrder: "content",
+            min: results.start,
+            max: results.end,
+            cluster: {
+                titleTemplate: "{count} more events - double click to focus"
+            }
+        };
+
+        // Show dropdown for selection
+        let dropdown = document.getElementById('process-select');
+
+        // Add 'all' option
+        let allOption = document.createElement('option');
+        allOption.text = "Show all";
+        allOption.value = "__all_processes__";
+        allOption.selected = true;
+        dropdown.add(allOption);
+
+        results.groups.forEach((group) => {
+            let option = document.createElement('option');
+            option.text = group.content;
+            option.value = group.content;
+            dropdown.add(option);
+        });
+
+        // Create a Timeline
+        window.timeline = new vis.Timeline(container, items, options);
+        timeline.setGroups(groups);
+
+        // Show selected processes
+        timeline.on('select', function (properties) {
+            let id = properties.items[0];
+
+            let process = results.processes.find(obj => {
+                return obj.id === id;
+            });
+
+            if (process != null) {
+                document.getElementById('selected-process-name').innerText = process.content;
+                document.getElementById('selected-process-comm').innerText = process.title
+                document.getElementById('selected-process-duration').innerText = (process.end - process.start).toString();
+            } else {
+                document.getElementById('selected-process-name').innerText = "-";
+                document.getElementById('selected-process-comm').innerText = "-";
+                document.getElementById('selected-process-duration').innerText = "-";
+            }
+        });
+
+        // Show stats (top X processes)
+        let sorted = results.stats.sort((a, b) => (b.frequency - a.frequency));
+
+        let max = sorted.length;
+        if (max > 10) {
+            max = 10;
+        }
+
+        for (let i = 0; i < max; i++) {
+            let row = document.getElementById('stats-table').getElementsByTagName('tbody')[0].insertRow();
+            row.insertCell().appendChild(document.createTextNode(results.stats[i].process));
+            row.insertCell().appendChild(document.createTextNode(results.stats[i].frequency));
+        }
+    }
+
+    renderTimeline();
+</script>
+</body>
+</html>
