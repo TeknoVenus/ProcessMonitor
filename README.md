@@ -12,7 +12,8 @@ Start by running ProcessMonitor, redirecting stdout to a file - this will contai
 ```shell
 ./ProcessMonitor > /opt/results.js
 ```
+Press `Ctrl + C` to stop capturing data.
 
-Copy this output file to `<repo-dir>/results_gui/results.js`
+Copy the generated output file to `<repo-dir>/results_gui/results.js` (must be called results.js for now)
 
 Load the index.html file - a timeline of the observed processes should appear.
