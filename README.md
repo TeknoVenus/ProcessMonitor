@@ -17,3 +17,5 @@ Press `Ctrl + C` to stop capturing data.
 Copy the generated output file to `<this-repo-dir>/results_gui/results.js` (must be called results.js for now)
 
 Load the index.html file - a timeline of the observed processes should appear.
+
+Note it may take a few minutes for a timeline to load, especially for longer captures with lots of data. Be patient!

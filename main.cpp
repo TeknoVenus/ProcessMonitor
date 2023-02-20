@@ -28,7 +28,7 @@ static void displayUsage()
     printf("Usage: ProcessMonitor <option(s)>\n");
     printf("    Linux process monitor\n\n");
     printf("    -h, --help          Print this help and exit\n");
-    printf("    -d, --duration      How long to capture data for (seconds)");
+    printf("    -d, --duration      How long to capture data for (seconds)\n");
     printf("    -o  --output        File to save results to\n");
 }
 

@@ -4,6 +4,7 @@
 #pragma once
 
 #include <chrono>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -15,10 +16,13 @@ static std::vector<std::string> prefixesToStrip =
     {"/bin/sh -c ", "/bin/sh ",           "/bin/bash -c ",    "/bin/bash ",        "sh -c",
      "sh ",         "/bin/busybox sh -c", "/bin/busybox sh ", "/bin/busybox bash "};
 
+static std::regex envVarRegex(R"(^[A-Z_]+=(`.*`|\$\(.*\)|[\w\/\${}]+);?)");
+
 struct processInfo
 {
     pid_t pid;
     pid_t parentPid;
+    pid_t grandparentPid;
 
     std::chrono::time_point<std::chrono::system_clock> endTime;
     std::chrono::time_point<std::chrono::system_clock> startTime;
@@ -27,6 +31,35 @@ struct processInfo
 
     std::string commandLine;
     std::string parentCommandLine;
+    std::string grandparentCommandLine;
+
+    /**
+     * Use some heuristics to try and get a suitable name for the timeline group
+     *
+     * @return
+     */
+    [[nodiscard]] std::string GetGroupName()
+    {
+       if (GetStrippedParentName().empty())
+       {
+           return GetStrippedGrandparentName();
+       }
+
+/*       for (const auto& prefix : prefixesToStrip)
+       {
+           if (parentCommandLine.rfind(prefix, 0) == 0)
+           {
+               return GetStrippedGrandparentName();
+           }
+       }*/
+
+       return GetStrippedParentName();
+    }
+
+    [[nodiscard]] std::string GetName()
+    {
+       return GetNameFromCommandLine(commandLine);
+    }
 
     /**
      * Get the name of the process, with any leading interpreter removed
@@ -84,9 +117,23 @@ struct processInfo
     }
 
     /**
-     * Get the command line of the parent process, with any leading interpreter removed
+     * Get the name of the grandparent process if possible, with any leading interpreter removed
      *
-     * @return stripped parent command line string
+     * @return stripped grandparent process name
+     */
+    [[nodiscard]] std::string GetStrippedGrandparentName()
+    {
+        if (mStrippedGrandparentName.empty())
+        {
+            mStrippedGrandparentName = GetNameFromCommandLine(GetStrippedGrandparentCommandLine());
+        }
+        return mStrippedGrandparentName;
+    }
+
+    /**
+     * Get the command line of the grandparent process, with any leading interpreter removed
+     *
+     * @return stripped grandparent command line string
      */
     [[nodiscard]] std::string GetStrippedParentCommandLine()
     {
@@ -95,6 +142,20 @@ struct processInfo
             mStrippedParentCmdline = StripPrefix(parentCommandLine);
         }
         return mStrippedParentCmdline;
+    }
+
+    /**
+     * Get the command line of the parent process, with any leading interpreter removed
+     *
+     * @return stripped parent command line string
+     */
+    [[nodiscard]] std::string GetStrippedGrandparentCommandLine()
+    {
+        if (mStrippedGrandparentCmdline.empty())
+        {
+            mStrippedGrandparentCmdline = StripPrefix(grandparentCommandLine);
+        }
+        return mStrippedGrandparentCmdline;
     }
 
 private:
@@ -108,10 +169,16 @@ private:
     {
         for (const auto &prefix : prefixesToStrip)
         {
-            if (cmdline.rfind(prefix, 0) == 0)
+            if (/*cmdline.length() > prefix.length() && */cmdline.rfind(prefix, 0) == 0)
             {
                 auto tmp = cmdline;
                 tmp.erase(tmp.begin(), tmp.begin() + prefix.size());
+
+                if (tmp[0] == ' ')
+                {
+                    tmp.erase(0, 1);
+                }
+
                 return tmp;
             }
         }
@@ -143,7 +210,15 @@ private:
             name.erase(0, 1);
         }
 
-        // First the first space - name is everyting before that
+        // Remove environment variable(s)
+        name = std::regex_replace(name, envVarRegex, "");
+
+        if (name[0] == ' ')
+        {
+            name.erase(0, 1);
+        }
+
+        // First the first space - name is everything before that
         auto spacePos = name.find_first_of(' ');
         if (spacePos != std::string::npos)
         {
@@ -157,7 +232,9 @@ private:
 
     std::string mStrippedName;
     std::string mStrippedParentName;
+    std::string mStrippedGrandparentName;
 
     std::string mStrippedCmdline;
     std::string mStrippedParentCmdline;
+    std::string mStrippedGrandparentCmdline;
 };

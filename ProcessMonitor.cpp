@@ -258,7 +258,6 @@ void ProcessMonitor::receiveMessages()
     header.msg_controllen = 0;
     header.msg_flags = 0;
 
-
     while (mListen)
     {
         ssize_t len = recvmsg(mSocket, &header, 0);
@@ -294,12 +293,14 @@ void ProcessMonitor::receiveMessages()
 
                 info.pid = ev->event_data.exec.process_pid;
                 info.parentPid = getParentPid(info.pid);
+                info.grandparentPid = getParentPid(info.parentPid);
 
                 // This isn't going to be 100% accurate but close enough
                 info.startTime = std::chrono::system_clock::now();
 
                 getProcessCommandLine(info.pid, info.commandLine);
                 getProcessCommandLine(info.parentPid, info.parentCommandLine);
+                getProcessCommandLine(info.grandparentPid, info.grandparentCommandLine);
 
                 mRunningProcesses.emplace_back(info);
                 break;
@@ -442,7 +443,7 @@ std::string ProcessMonitor::GetJson()
             process["id"] = p.pid;
             process["content"] = p.GetStrippedName();
             process["title"] = p.GetStrippedCommandLine();
-            process["group"] = p.GetStrippedParentName();
+            process["group"] = p.GetGroupName();
             process["start"] =
                 std::chrono::duration_cast<std::chrono::milliseconds>(p.startTime.time_since_epoch()).count();
             process["end"] = std::chrono::duration_cast<std::chrono::milliseconds>(p.endTime.time_since_epoch()).count();
@@ -452,7 +453,7 @@ std::string ProcessMonitor::GetJson()
 
             results["processes"].emplace_back(process);
 
-            groups.insert(p.GetStrippedParentName());
+            groups.insert(process["group"]);
 
             processExecutionCount[p.GetStrippedName()] += 1;
         }
