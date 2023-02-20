@@ -7,10 +7,6 @@ set(PATCH_VERSION 0)
 
 project(ProcessMonitor VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}")
 
-# Set a global define for the build version
-set(BUILD_REFERENCE "unknown" CACHE STRING "Commit hash")
-add_compile_definitions(PROJECT_VERSION="${CMAKE_PROJECT_VERSION}-${BUILD_REFERENCE}")
-
 # Include GNUInstallDirs module to access CMAKE_INSTALL_* directory variables
 include(GNUInstallDirs)
 
@@ -42,3 +38,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
         Threads::Threads)
+
+install(TARGETS ${PROJECT_NAME}
+        RUNTIME DESTINATION bin
+        )
