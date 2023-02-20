@@ -1,6 +1,5 @@
-//
-// Created by Stephen F on 09/02/23.
-//
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2023 Stephen Foulds
 
 #pragma once
 
@@ -31,7 +30,7 @@ private:
     bool setListenMode(bool enable) const;
 
     void receiveMessages();
-    void getProcessName(pid_t pid, std::string &name, std::string& commandLine) const;
+    static void getProcessCommandLine(pid_t pid, std::string& commandLine) ;
     [[nodiscard]] pid_t getParentPid(pid_t pid) const;
     void setSocketFilter() const;
 
@@ -51,7 +50,4 @@ private:
 
     std::chrono::time_point<std::chrono::system_clock> mStart;
     std::chrono::time_point<std::chrono::system_clock> mEnd;
-
-    // Prefixes from commands to strip
-    std::list<std::string> mStripPrefixes;
 };

@@ -1,6 +1,5 @@
-//
-// Created by Stephen F on 09/02/23.
-//
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2023 Stephen Foulds
 
 #include "ProcessMonitor.h"
 #include "Log.h"
@@ -33,10 +32,7 @@
  * * https://nick-black.com/dankwiki/index.php/The_Proc_Connector_and_Socket_Filters
  * * https://bewareofgeek.livejournal.com/2945.html
  */
-ProcessMonitor::ProcessMonitor()
-    : mSocket(0), mListen(false), mValid(false),
-      mStripPrefixes({"/bin/sh -c ", "/bin/sh ", "/bin/bash ", "sh -c", "sh ", "/bin/busybox sh -c", "/bin/busybox sh ",
-                      "/bin/busybox bash "})
+ProcessMonitor::ProcessMonitor() : mSocket(0), mListen(false), mValid(false)
 {
     mPageSize = sysconf(_SC_PAGESIZE);
 
@@ -81,20 +77,35 @@ ProcessMonitor::~ProcessMonitor()
     }
 }
 
+/**
+ * @brief Start a thread to capture process exec/exit. Returns as soon as thread started, non-blocking
+ *
+ * @return True if capture thread started
+ */
 bool ProcessMonitor::Start()
 {
     if (mValid)
     {
         mStart = std::chrono::system_clock::now();
         mListen = setListenMode(true);
-        mMessageReceiver = std::thread(&ProcessMonitor::receiveMessages, this);
 
-        return mListen;
+        if (mListen)
+        {
+            mMessageReceiver = std::thread(&ProcessMonitor::receiveMessages, this);
+
+            return mMessageReceiver.joinable();
+        }
+        return false;
     }
 
     return false;
 }
 
+/**
+ * Stop the currently running capture thread
+ *
+ * @return True if successfully stopped
+ */
 bool ProcessMonitor::Stop()
 {
     mListen = false;
@@ -109,6 +120,10 @@ bool ProcessMonitor::Stop()
     return true;
 }
 
+/**
+ * @brief Enables kernel-level filtering on the socket with BPF to reduce userspace CPU load by only receiving
+ * events we actually care about
+ */
 void ProcessMonitor::setSocketFilter() const
 {
     // Best practice is to block everything first, then drain the socket completely. This prevents unwanted events
@@ -163,6 +178,13 @@ void ProcessMonitor::setSocketFilter() const
     }
 }
 
+/**
+ * Sets the listening mode on the netlink socket to start/stop receiving events
+ *
+ * @param enable Whether to receive events over the netlink socket
+ *
+ * @return True if the listen mode was set successfully
+ */
 bool ProcessMonitor::setListenMode(bool enable) const
 {
     struct iovec iov[3];
@@ -214,37 +236,40 @@ bool ProcessMonitor::setListenMode(bool enable) const
     }
 }
 
+/**
+ * Loop to process incoming netlink messages and track process exec/exit
+ */
 void ProcessMonitor::receiveMessages()
 {
+    char buffer[mPageSize];
+
     struct msghdr header = {};
-    struct sockaddr_nl addr = {};
+    struct sockaddr_nl address = {};
+
     struct iovec iov[1];
+    iov[0].iov_base = buffer;
+    iov[0].iov_len = sizeof buffer;
 
-    char buf[mPageSize];
-    ssize_t len;
-
-    header.msg_name = &addr;
-    header.msg_namelen = sizeof addr;
+    header.msg_name = &address;
+    header.msg_namelen = sizeof address;
     header.msg_iov = iov;
     header.msg_iovlen = 1;
     header.msg_control = nullptr;
     header.msg_controllen = 0;
     header.msg_flags = 0;
 
-    iov[0].iov_base = buf;
-    iov[0].iov_len = sizeof buf;
 
     while (mListen)
     {
-        len = recvmsg(mSocket, &header, 0);
+        ssize_t len = recvmsg(mSocket, &header, 0);
 
-        if (addr.nl_pid != 0)
+        if (address.nl_pid != 0)
         {
             continue;
         }
 
         // Got a message
-        for (auto *message = reinterpret_cast<struct nlmsghdr *>(buf); NLMSG_OK(message, len);
+        for (auto *message = reinterpret_cast<struct nlmsghdr *>(buffer); NLMSG_OK(message, len);
              message = NLMSG_NEXT(message, len))
         {
             auto *connectorMessage = static_cast<cn_msg *>(NLMSG_DATA(message));
@@ -264,37 +289,40 @@ void ProcessMonitor::receiveMessages()
             {
             case proc_event::PROC_EVENT_EXEC:
             {
+                // Process has started
                 processInfo info = {};
 
                 info.pid = ev->event_data.exec.process_pid;
                 info.parentPid = getParentPid(info.pid);
 
+                // This isn't going to be 100% accurate but close enough
                 info.startTime = std::chrono::system_clock::now();
 
-                getProcessName(info.pid, info.name, info.commandLine);
-                getProcessName(info.parentPid, info.parentName, info.parentCommandLine);
+                getProcessCommandLine(info.pid, info.commandLine);
+                getProcessCommandLine(info.parentPid, info.parentCommandLine);
 
                 mRunningProcesses.emplace_back(info);
                 break;
             }
             case proc_event::PROC_EVENT_EXIT:
             {
+                // Process has exited
+
                 pid_t pid = ev->event_data.exit.process_pid;
+
                 auto process = std::find_if(mRunningProcesses.begin(), mRunningProcesses.end(),
                                             [pid](const processInfo &pi) { return pi.pid == pid; });
 
+                // Are we tracking this process?
                 if (process != mRunningProcesses.end())
                 {
                     auto &p = (*process);
 
+                    // Update process with the exit time and code
                     p.endTime = std::chrono::system_clock::now();
                     p.exitCode = ev->event_data.exit.exit_code;
 
-                    // Log("Process '%s' (%s) (PID %d) exited with code %d (parent %s pid:%d)", p.name.c_str(),
-                    // p.commandLine.c_str(), p.pid,
-                    //                        p.exitCode, p.parentName.c_str(), p.parentPid);
-
-                    // Move process from running to exited
+                    // Move process from running vector to exited vector
                     mExitedProcesses.insert(mExitedProcesses.end(), std::make_move_iterator(process),
                                             std::make_move_iterator(std::next(process)));
                     mRunningProcesses.erase(process);
@@ -309,7 +337,16 @@ void ProcessMonitor::receiveMessages()
     }
 }
 
-void ProcessMonitor::getProcessName(pid_t pid, std::string &name, std::string &commandLine) const
+/**
+ * Given a PID, retrieve the command line of the processes from /proc/x/cmdline, correctly parsing it into a std string
+ *
+ * Commandline will be "Unknown" if this fails - can happen for extremely short-lived processes that have quit by the
+ * time we get here
+ *
+ * @param pid PID to get command line for
+ * @param[out] commandLine command line of the process.
+ */
+void ProcessMonitor::getProcessCommandLine(pid_t pid, std::string &commandLine)
 {
     char procPath[PATH_MAX];
 
@@ -325,39 +362,16 @@ void ProcessMonitor::getProcessName(pid_t pid, std::string &name, std::string &c
         {
             // Command line contains full string with args
             // Name is just the main process name
+
             commandLine.assign(cmdline, ret);
 
-            // Remove null chars
+            // Replace null chars with spaces
             std::replace(commandLine.begin(), std::prev(commandLine.end()), '\0', ' ');
             commandLine.erase(std::remove(std::prev(commandLine.end()), commandLine.end(), '\0'), commandLine.end());
-
-            // To make our life easier, remove /bin/sh or similar from the start of the command if it's present
-            for (const auto &prefix : mStripPrefixes)
-            {
-                if (commandLine.rfind(prefix, 0) == 0)
-                {
-                    commandLine.erase(commandLine.begin(), commandLine.begin() + prefix.size());
-                    break;
-                }
-            }
-
-            name = commandLine;
-            if (name[0] == ' ')
-            {
-                name.erase(0, 1);
-            }
-
-            auto spacePos = name.find_first_of(' ');
-            if (spacePos != std::string::npos)
-            {
-                auto it = name.begin();
-                std::advance(it, spacePos);
-                name.erase(it, name.end());
-            }
         }
         else
         {
-            name = "Unknown";
+            // Failed to read from file, process has probably quit
             commandLine = "Unknown";
         }
 
@@ -365,11 +379,17 @@ void ProcessMonitor::getProcessName(pid_t pid, std::string &name, std::string &c
     }
     else
     {
-        name = "Unknown";
+        // Can't read cmdline file, process has probably quit
         commandLine = "Unknown";
     }
 }
 
+/**
+ * Given a PID, return the PID of the parent process
+ *
+ * @param pid PID to find parent pid of
+ * @return parent pid - 0 if unknown
+ */
 pid_t ProcessMonitor::getParentPid(pid_t pid) const
 {
     char procPath[PATH_MAX];
@@ -396,6 +416,12 @@ pid_t ProcessMonitor::getParentPid(pid_t pid) const
     return 0;
 }
 
+/**
+ * Build a JSON document containing the results, formatted in a suitable way for a vis.js dataset that can be displayed
+ * in a timeline
+ *
+ * @return JSON string
+ */
 std::string ProcessMonitor::GetJson()
 {
     Log("Generating process JSON");
@@ -407,23 +433,28 @@ std::string ProcessMonitor::GetJson()
 
     nlohmann::json process;
     std::map<std::string, int> processExecutionCount;
-    for (const auto &p : mExitedProcesses)
+    for (auto &p : mExitedProcesses)
     {
-        if (!p.name.empty() && p.name != "Unknown" && !p.parentName.empty() && p.parentName != "Unknown")
+        if (!p.commandLine.empty() && p.commandLine != "Unknown" && !p.parentCommandLine.empty() &&
+            p.parentCommandLine != "Unknown")
         {
             process.clear();
             process["id"] = p.pid;
-            process["content"] = p.name;
-            process["title"] = p.commandLine;
-            process["group"] = p.parentName;
+            process["content"] = p.GetStrippedName();
+            process["title"] = p.GetStrippedCommandLine();
+            process["group"] = p.GetStrippedParentName();
             process["start"] =
                 std::chrono::duration_cast<std::chrono::milliseconds>(p.startTime.time_since_epoch()).count();
             process["end"] = std::chrono::duration_cast<std::chrono::milliseconds>(p.endTime.time_since_epoch()).count();
+            process["fullCommandLine"] = p.commandLine;
+            process["parentCommandLine"] = p.parentCommandLine;
+            process["exitCode"] = p.exitCode;
+
             results["processes"].emplace_back(process);
 
-            groups.insert(p.parentName);
+            groups.insert(p.GetStrippedParentName());
 
-            processExecutionCount[p.name] += 1;
+            processExecutionCount[p.GetStrippedName()] += 1;
         }
     }
 

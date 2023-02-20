@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2023 Stephen Foulds
+
 #pragma once
 
 #include <unistd.h>
