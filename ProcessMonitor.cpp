@@ -449,6 +449,7 @@ std::string ProcessMonitor::GetJson()
             process["end"] = std::chrono::duration_cast<std::chrono::milliseconds>(p.endTime.time_since_epoch()).count();
             process["fullCommandLine"] = p.commandLine;
             process["parentCommandLine"] = p.parentCommandLine;
+            process["grandparentCommandLine"] = p.grandparentCommandLine;
             process["exitCode"] = p.exitCode;
 
             results["processes"].emplace_back(process);

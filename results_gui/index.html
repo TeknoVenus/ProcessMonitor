@@ -18,7 +18,7 @@
 <body>
 <div class="container-fluid">
     <div class="row mt-2">
-        <div class="col-10">
+        <div class="col-9">
             <h4>Timeline: <span id="start-time"></span> - <span id="end-time"></span>
                 <button class="btn btn-sm btn-primary ms-3" onclick="window.timeline.fit()">Reset Zoom</button>
             </h4>
@@ -31,7 +31,7 @@
             <div id="visualization"></div>
             <p class="mt-1 fst-italic">Hold Ctrl and scroll to zoom in/out</p>
         </div>
-        <div id="stats" class="col-2">
+        <div id="stats" class="col-3">
             <h4>Top Processes</h4>
             <table class="table table-striped table-bordered mb-4" id="stats-table">
                 <thead>
@@ -61,6 +61,10 @@
                 <tr>
                     <td>Parent Command Line</td>
                     <td><code style="word-break: break-all" id="selected-process-parent-comm">-</code></td>
+                </tr>
+                <tr>
+                    <td>Grandparent Command Line</td>
+                    <td><code style="word-break: break-all" id="selected-process-grandparent-comm">-</code></td>
                 </tr>
                 <tr>
                     <td>Duration (ms)</td>
@@ -190,6 +194,7 @@
                 document.getElementById('selected-process-comm').innerText = process.fullCommandLine;
                 document.getElementById('selected-process-duration').innerText = (process.end - process.start).toString();
                 document.getElementById('selected-process-parent-comm').innerText = process.parentCommandLine;
+                document.getElementById('selected-process-grandparent-comm').innerText = process.grandparentCommandLine;
                 document.getElementById('selected-process-exitcode').innerText = process.exitCode;
             } else {
                 document.getElementById('selected-process-pid').innerText = "-";
@@ -197,6 +202,7 @@
                 document.getElementById('selected-process-comm').innerText = "-";
                 document.getElementById('selected-process-duration').innerText = "-";
                 document.getElementById('selected-process-parent-comm').innerText = "-";
+                document.getElementById('selected-process-grandparent-comm').innerText = "-";
                 document.getElementById('selected-process-exitcode').innerText = "-";
             }
         });
