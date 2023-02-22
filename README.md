@@ -21,7 +21,9 @@ Load the index.html file (Chrome works best) and a timeline of the observed proc
 
 ![screenshot of timeline](./docs/timeline.png)
 
-Note it may take a few minutes for a timeline to load, especially for longer captures with lots of data. Be patient!
+Note it may take a few minutes for a timeline to load, especially for longer captures with lots of data (your browser may warn you the page is unresponsive, just allow it to continue - be patient!)
+
+The tool will do it's best to work out the "true" command name - i.e. if the command is run under a specific interpreter (`sh -c ls -a`), the tool will work out the true command is actually `ls`.
 
 ### Timeline tips
 * Hold `Ctrl` and scroll to zoom in/out

@@ -16,7 +16,7 @@ static std::vector<std::string> prefixesToStrip =
     {"/bin/sh -c ", "/bin/sh ",           "/bin/bash -c ",    "/bin/bash ",        "sh -c",
      "sh ",         "/bin/busybox sh -c", "/bin/busybox sh ", "/bin/busybox bash "};
 
-static std::regex envVarRegex(R"(^[A-Z_]+=(`.*`|\$\(.*\)|[\w\/\${}]+);?)");
+static std::regex envVarRegex(R"(^[A-Z_]+=(`.*`|\$\(.*\)|[\w\/\${}:]+);?)");
 
 struct processInfo
 {

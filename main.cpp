@@ -130,18 +130,17 @@ int main(int argc, char **argv)
     auto json = monitor.GetJson();
 
     auto outputFile = std::filesystem::path(gOutputFile);
-    auto outputDirectory = outputFile.parent_path();
 
     // Create directory if it doesn't exist
-    if (!std::filesystem::exists(outputDirectory))
+    if (!std::filesystem::exists(outputFile.parent_path()))
     {
-        std::filesystem::create_directory(outputDirectory);
+        std::filesystem::create_directory(outputFile.parent_path());
     }
 
     Log("Saving results to %s", gOutputFile.c_str());
 
     // Write results
-    std::ofstream outputStream(outputFile);
+    std::ofstream outputStream(outputFile, std::ios::trunc);
     if (outputStream)
     {
         outputStream << "let results = " << json << ";";
