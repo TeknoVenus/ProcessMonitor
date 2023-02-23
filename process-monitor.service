@@ -1,9 +1,11 @@
 [Unit]
 Description=Linux process monitor for debugging
+After=basic.target
 RequiresMountsFor=/opt
 
 [Service]
 # Track processes for 3 minutes, then save results in /opt
+Type=simple
 ExecStart=/usr/bin/ProcessMonitor --duration 180 --output /opt/processMonitorResults.js
 
 [Install]
