@@ -34,7 +34,7 @@
         <div id="stats" class="col-3">
             <h4>Top Processes</h4>
             <table class="table table-striped table-bordered mb-4" id="stats-table">
-                <thead>
+                <thead class="table-dark">
                 <tr>
                     <th>Process Name</th>
                     <th># Executions</th>
@@ -42,6 +42,8 @@
                 </thead>
                 <tbody>
                 </tbody>
+                <tfoot class="table-dark">
+                </tfoot>
             </table>
             <h4>Selected Process</h4>
             <table class="table table-striped table-bordered">
@@ -220,6 +222,16 @@
             row.insertCell().appendChild(document.createTextNode(results.stats[i].process));
             row.insertCell().appendChild(document.createTextNode(results.stats[i].frequency));
         }
+
+        let totalExecutions = 0;
+        for (let i = 0; i < sorted.length; i++)
+        {
+            totalExecutions += results.stats[i].frequency;
+        }
+        let row = document.getElementById('stats-table').getElementsByTagName('tfoot')[0].insertRow();
+        row.insertCell().appendChild(document.createTextNode("Total"));
+        row.insertCell().appendChild(document.createTextNode(totalExecutions.toString()));
+
 
         document.getElementById('start-time').innerText = new Date(results.start).toLocaleString();
         document.getElementById('end-time').innerText = new Date(results.end).toLocaleString();
