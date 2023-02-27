@@ -5,7 +5,7 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=894d9b830cb1f38db58741000f9c2c7f"
 
 S = "${WORKDIR}/git"
 SRC_URI = "https://github.com/TeknoVenus/ProcessMonitor.git;branch=main"
-SRCREV = "c7c013227e8f1ab39be94d00588b4f42b2c2b153"
+SRCREV = "bc028ede4e498afe11fe19e9d2607cd21b92e631"
 
 inherit cmake systemd
 
