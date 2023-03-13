@@ -302,6 +302,8 @@ void ProcessMonitor::receiveMessages()
                 getProcessCommandLine(info.parentPid, info.parentCommandLine);
                 getProcessCommandLine(info.grandparentPid, info.grandparentCommandLine);
 
+                info.systemdServiceName = getSystemdService(info.pid);
+
                 mRunningProcesses.emplace_back(info);
                 break;
             }
@@ -362,8 +364,6 @@ void ProcessMonitor::getProcessCommandLine(pid_t pid, std::string &commandLine)
         if (ret > 0)
         {
             // Command line contains full string with args
-            // Name is just the main process name
-
             commandLine.assign(cmdline, ret);
 
             // Replace null chars with spaces
@@ -391,27 +391,25 @@ void ProcessMonitor::getProcessCommandLine(pid_t pid, std::string &commandLine)
  * @param pid PID to find parent pid of
  * @return parent pid - 0 if unknown
  */
-pid_t ProcessMonitor::getParentPid(pid_t pid) const
+pid_t ProcessMonitor::getParentPid(pid_t pid)
 {
     char procPath[PATH_MAX];
 
-    sprintf(procPath, "/proc/%u/status", pid);
+    sprintf(procPath, "/proc/%u/stat", pid);
 
     FILE *f = fopen(procPath, "r");
     if (f != nullptr)
     {
-        char buffer[1024];
         pid_t parentPid;
-        while (fgets(buffer, sizeof(buffer), f) != nullptr)
+        if (fscanf(f, "%*d %*s %*c %d", &parentPid) > 0)
         {
-            if (sscanf(buffer, "PPid:\t%d", &parentPid) != 0)
-            {
-                break;
-            }
+            fclose(f);
+            return parentPid;
         }
-
-        fclose(f);
-        return parentPid;
+        else
+        {
+            return 0;
+        }
     }
 
     return 0;
@@ -431,9 +429,13 @@ std::string ProcessMonitor::GetJson()
     nlohmann::json results;
 
     std::set<std::string> groups;
+    std::set<std::string> systemdServices;
 
     nlohmann::json process;
     std::map<std::string, int> processExecutionCount;
+
+    std::unordered_map<std::string, int> systemdServiceCount;
+
     for (auto &p : mExitedProcesses)
     {
         if (!p.commandLine.empty() && p.commandLine != "Unknown" && !p.parentCommandLine.empty() &&
@@ -451,12 +453,16 @@ std::string ProcessMonitor::GetJson()
             process["parentCommandLine"] = p.parentCommandLine;
             process["grandparentCommandLine"] = p.grandparentCommandLine;
             process["exitCode"] = p.exitCode;
+            process["systemdService"] = p.systemdServiceName;
 
             results["processes"].emplace_back(process);
 
             groups.insert(process["group"]);
+            systemdServices.insert(p.systemdServiceName);
 
             processExecutionCount[p.GetStrippedName()] += 1;
+
+            systemdServiceCount[p.systemdServiceName] += 1;
         }
     }
 
@@ -474,11 +480,54 @@ std::string ProcessMonitor::GetJson()
         nlohmann::json stats;
         stats["process"] = freq.first;
         stats["frequency"] = freq.second;
-        results["stats"].emplace_back(stats);
+
+        results["stats"]["processes"].emplace_back(stats);
+    }
+
+    for (const auto &service : systemdServiceCount)
+    {
+        nlohmann::json stats;
+        stats["serviceName"] = service.first;
+        stats["frequency"] = service.second;
+
+        results["stats"]["services"].emplace_back(stats);
     }
 
     results["start"] = std::chrono::duration_cast<std::chrono::milliseconds>(mStart.time_since_epoch()).count();
     results["end"] = std::chrono::duration_cast<std::chrono::milliseconds>(mEnd.time_since_epoch()).count();
 
     return results.dump();
+}
+
+/**
+ * Given a PID, attempts to work out which systemd service it belongs to
+ *
+ * Will return "None" if it does not belong to a service
+ * @param pid
+ * @return
+ */
+std::string ProcessMonitor::getSystemdService(pid_t pid)
+{
+    char cgroupPath[PATH_MAX]{};
+    sprintf(cgroupPath, "/proc/%u/cgroup", pid);
+
+    std::ifstream cgroupFile(cgroupPath);
+
+    if (!cgroupFile)
+    {
+        return "None";
+    }
+
+    std::string line;
+    char serviceName[256]{};
+    while (std::getline(cgroupFile, line))
+    {
+        // Example: 1:name=systemd:/system.slice/ip-setup-monitor.service
+        if (sscanf(line.c_str(), "%*d:name=systemd:/system.slice/%255s", serviceName) > 0)
+        {
+            return {serviceName};
+        }
+    }
+
+    return "None";
 }

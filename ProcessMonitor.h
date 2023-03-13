@@ -21,6 +21,9 @@ public:
     ProcessMonitor();
     ~ProcessMonitor();
 
+    ProcessMonitor(const ProcessMonitor &) = delete;
+    ProcessMonitor &operator=(const ProcessMonitor &) = delete;
+
     bool Start();
     bool Stop();
 
@@ -30,9 +33,11 @@ private:
     bool setListenMode(bool enable) const;
 
     void receiveMessages();
-    static void getProcessCommandLine(pid_t pid, std::string& commandLine) ;
-    [[nodiscard]] pid_t getParentPid(pid_t pid) const;
+    static void getProcessCommandLine(pid_t pid, std::string &commandLine);
+    [[nodiscard]] static pid_t getParentPid(pid_t pid);
     void setSocketFilter() const;
+
+    std::string getSystemdService(pid_t pid);
 
 private:
     int mSocket;

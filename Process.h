@@ -33,6 +33,8 @@ struct processInfo
     std::string parentCommandLine;
     std::string grandparentCommandLine;
 
+    std::string systemdServiceName;
+
     /**
      * Use some heuristics to try and get a suitable name for the timeline group
      *
@@ -40,26 +42,23 @@ struct processInfo
      */
     [[nodiscard]] std::string GetGroupName()
     {
-       if (GetStrippedParentName().empty())
-       {
-           return GetStrippedGrandparentName();
-       }
+        if (GetStrippedParentName().empty())
+        {
+            return GetStrippedGrandparentName();
+        }
 
-/*       for (const auto& prefix : prefixesToStrip)
-       {
-           if (parentCommandLine.rfind(prefix, 0) == 0)
-           {
-               return GetStrippedGrandparentName();
-           }
-       }*/
+        /*       for (const auto& prefix : prefixesToStrip)
+               {
+                   if (parentCommandLine.rfind(prefix, 0) == 0)
+                   {
+                       return GetStrippedGrandparentName();
+                   }
+               }*/
 
-       return GetStrippedParentName();
+        return GetStrippedParentName();
     }
 
-    [[nodiscard]] std::string GetName()
-    {
-       return GetNameFromCommandLine(commandLine);
-    }
+    [[nodiscard]] std::string GetName() { return GetNameFromCommandLine(commandLine); }
 
     /**
      * Get the name of the process, with any leading interpreter removed
@@ -169,7 +168,7 @@ private:
     {
         for (const auto &prefix : prefixesToStrip)
         {
-            if (/*cmdline.length() > prefix.length() && */cmdline.rfind(prefix, 0) == 0)
+            if (/*cmdline.length() > prefix.length() && */ cmdline.rfind(prefix, 0) == 0)
             {
                 auto tmp = cmdline;
                 tmp.erase(tmp.begin(), tmp.begin() + prefix.size());

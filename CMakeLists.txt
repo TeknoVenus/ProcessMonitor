@@ -37,7 +37,8 @@ target_include_directories(${PROJECT_NAME}
         )
 
 target_link_libraries(${PROJECT_NAME}
-        Threads::Threads)
+        Threads::Threads
+        )
 
 install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION bin
