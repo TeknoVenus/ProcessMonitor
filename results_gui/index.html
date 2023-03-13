@@ -33,8 +33,8 @@
             <p class="mt-1 fst-italic">Hold Ctrl and scroll to zoom in/out</p>
         </div>
         <div id="stats" class="col-3">
-            <h4>Top 5 Systemd Services</h4>
-            <table class="table table-striped table-bordered mb-4" id="services-table">
+            <h4>Top 10 Systemd Services</h4>
+            <table class="table table-striped table-bordered table-sm mb-4" id="services-table">
                 <thead class="table-dark">
                 <tr>
                     <th>Service Name</th>
@@ -44,8 +44,8 @@
                 <tbody>
                 </tbody>
             </table>
-            <h4>Top 5 Processes</h4>
-            <table class="table table-striped table-bordered mb-4" id="stats-table">
+            <h4>Top 10 Processes</h4>
+            <table class="table table-striped table-bordered table-sm mb-4" id="stats-table">
                 <thead class="table-dark">
                 <tr>
                     <th>Process Name</th>
@@ -58,7 +58,7 @@
                 </tfoot>
             </table>
             <h4>Selected Process</h4>
-            <table class="table table-striped table-bordered">
+            <table class="table table-striped table-bordered table-sm">
                 <tbody>
                 <tr>
                     <td>PID</td>
@@ -153,8 +153,8 @@
         let sorted = results.stats.processes.sort((a, b) => (b.frequency - a.frequency));
 
         let max = sorted.length;
-        if (max > 5) {
-            max = 5;
+        if (max > 10) {
+            max = 10;
         }
 
         for (let i = 0; i < max; i++) {
@@ -176,8 +176,8 @@
         let sorted = results.stats.services.sort((a, b) => (b.frequency - a.frequency));
 
         let max = sorted.length;
-        if (max > 5) {
-            max = 5;
+        if (max > 10) {
+            max = 10;
         }
 
         for (let i = 0; i < max; i++) {
