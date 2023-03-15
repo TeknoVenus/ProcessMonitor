@@ -244,7 +244,7 @@
             });
 
             if (process != null) {
-                document.getElementById('selected-process-pid').innerText = process.id;
+                document.getElementById('selected-process-pid').innerText = process.pid;
                 document.getElementById('selected-process-name').innerText = process.content;
                 document.getElementById('selected-process-comm').innerText = process.fullCommandLine;
                 document.getElementById('selected-process-duration').innerText = (process.end - process.start).toString();

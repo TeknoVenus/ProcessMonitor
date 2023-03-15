@@ -260,7 +260,12 @@ void ProcessMonitor::receiveMessages()
 
     while (mListen)
     {
-        ssize_t len = recvmsg(mSocket, &header, 0);
+        ssize_t len = TEMP_FAILURE_RETRY(recvmsg(mSocket, &header, 0));
+
+        if (len < 0)
+        {
+            Log("Failed to receive message with error %d", errno);
+        }
 
         if (address.nl_pid != 0)
         {
@@ -289,7 +294,7 @@ void ProcessMonitor::receiveMessages()
             case proc_event::PROC_EVENT_EXEC:
             {
                 // Process has started
-                processInfo info = {};
+                processInfo info{};
 
                 info.pid = ev->event_data.exec.process_pid;
                 info.parentPid = getParentPid(info.pid);
@@ -442,7 +447,11 @@ std::string ProcessMonitor::GetJson()
             p.parentCommandLine != "Unknown")
         {
             process.clear();
-            process["id"] = p.pid;
+
+            // Can't just use PID on its own as the id, since Linux will re-use PIDs eventually
+            // Instead, id is built from start time and pid
+            process["id"] = std::to_string(p.pid) + "_" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(p.startTime.time_since_epoch()).count());
+            process["pid"] = p.pid;
             process["content"] = p.GetStrippedName();
             process["title"] = p.GetStrippedCommandLine();
             process["group"] = p.GetGroupName();
