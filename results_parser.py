@@ -13,17 +13,6 @@ def parse(filename):
 
         stats = results_json['stats']
 
-        print("Top systemd services")
-        print("-----------------------")
-        for service in sorted(stats['services'], key=lambda k: k['frequency'], reverse=True):
-            print(f"{service['serviceName']}: {service['frequency']}")
-
-        print("")
-        print("Top processes")
-        print("-----------------------")
-        for process in sorted(stats['processes'], key=lambda k: k['frequency'], reverse=True):
-            print(f"{process['process']}: {process['frequency']}")
-
         print("")
         print("Processes per group")
         print("-----------------------")
@@ -34,14 +23,38 @@ def parse(filename):
             processes_in_group = results_json['processes']
             tmp = [x for x in processes_in_group if x['group'] == group['id']]
 
+            unique_child_procs = {}
+            for proc in tmp:
+                name = proc['content']
+
+                if unique_child_procs.get(name):
+                    unique_child_procs[name] += 1
+                else:
+                    unique_child_procs[name] = 1
+
             g = {}
             g['name'] = group['content']
             g['frequency'] = len(tmp)
+            g['unique_children'] = dict(sorted(unique_child_procs.items(), key=lambda item: item[1], reverse=True))
 
             groups.append(g)
 
         for group in sorted(groups, key=lambda k: k['frequency'], reverse=True):
             print(f"{group['name']}: {group['frequency']}")
+            for child in group['unique_children']:
+                print(f"\t|- {child}: {group['unique_children'][child]} ({round(group['unique_children'][child] / group['frequency'] * 100, 2)}%)")
+
+
+        print("Top systemd services")
+        print("-----------------------")
+        for service in sorted(stats['services'], key=lambda k: k['frequency'], reverse=True):
+            print(f"{service['serviceName']}: {service['frequency']}")
+
+        print("")
+        print("Top unique processes")
+        print("-----------------------")
+        for process in sorted(stats['processes'], key=lambda k: k['frequency'], reverse=True):
+            print(f"{process['process']}: {process['frequency']}")
 
 
 def main():
