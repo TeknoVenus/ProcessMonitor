@@ -15,6 +15,13 @@ Start by running ProcessMonitor as root, providing a duration to capture for (in
 ```shell
 $ ./ProcessMonitor --duration 60 --output /tmp/processMonitor/results.js
 ```
+
+## Analysis
+There are two ways to analyse the results:
+* Graphical timeline view - useful to get a visulisation of running processes and execution times
+* Textual summary (python script) - useful to get a quick summary of spawned processes
+
+### Timeline View
 Copy the generated output file to `<this-repo-dir>/results_gui/results.js` (must be called results.js for now)
 
 Load the index.html file (Chrome works best) and a timeline of the observed processes should appear.
@@ -25,7 +32,7 @@ Note it may take a few minutes for a timeline to load, especially for longer cap
 
 The tool will do it's best to work out the "true" command name - i.e. if the command is run under a specific interpreter (`sh -c ls -a`), the tool will work out the true command is actually `ls`.
 
-### Timeline tips
+#### Timeline tips
 * Hold `Ctrl` and scroll to zoom in/out
 * Processes are grouped by their parent process
   * Only show specific parent processes using the filter dropdown
@@ -33,7 +40,7 @@ The tool will do it's best to work out the "true" command name - i.e. if the com
 * When zoomed out, some processes may be clustered together - shown by a number representing the number of processes in that cluster
   * Zoom in or double-click the cluster to see details!
 
-## Python Analysis Script
+## Textual Summary - Python Analysis Script
 For large datasets, the timeline may fail to load or be unwieldly. For this scenario, a python script `results_parser.py` is included.
 
 Usage:
