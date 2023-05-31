@@ -50,7 +50,7 @@ $ python3 ./results_parser.py <path-to-results.js>
 
 This will analyse the data and produce a report. The report is broken down into 3 sections:
 
-### Processes by Group
+#### Processes by Group
 This is a list of the number of processes run by a particular script/daemon, including the total number of processes spawned and a breakdown of the processes run.
 
 For example:
@@ -75,7 +75,7 @@ Here we can see:
 
 This data can be used to pinpoint daemons/scripts that frequently spawn child processes, and of those child processes which are run most often.
 
-### Top systemd services
+#### Top systemd services
 This is a list of the systemd services that spawned child processes, sorted by number of child processes seen.
 
 For example:
@@ -88,7 +88,7 @@ logrotate.service: 2843
 
 Here, 59,427 child processes were run by the `collectd` systemd service.
 
-### Top Unique Processes
+#### Top Unique Processes
 A list of all the processes seen during the ProcessMonitor run, ungrouped, and how many times they were seen.
 
 For example:
