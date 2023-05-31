@@ -40,7 +40,7 @@ The tool will do it's best to work out the "true" command name - i.e. if the com
 * When zoomed out, some processes may be clustered together - shown by a number representing the number of processes in that cluster
   * Zoom in or double-click the cluster to see details!
 
-## Textual Summary - Python Analysis Script
+### Textual Summary - Python Analysis Script
 For large datasets, the timeline may fail to load or be unwieldly. For this scenario, a python script `results_parser.py` is included.
 
 Usage:
